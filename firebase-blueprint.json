@@ -1,0 +1,238 @@
+{
+  "entities": {
+    "WorkerSettings": {
+      "title": "WorkerSettings",
+      "description": "Private worker profile, emergency contact details, and configurable heat-exposure thresholds.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the worker."
+        },
+        "workerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "Worker display name included in SOS SMS drafts."
+        },
+        "siteLocation": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 120,
+          "description": "Active job site or zone name."
+        },
+        "emergencyContactName": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 80,
+          "description": "Name of the designated supervisor or emergency contact."
+        },
+        "emergencyContactPhone": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 24,
+          "pattern": "^[0-9+\\-()\\s]*$",
+          "description": "Phone number opened in the device SMS composer on SOS."
+        },
+        "cautionThresholdC": {
+          "type": "number",
+          "description": "Heat index threshold in Celsius for Caution level."
+        },
+        "warningThresholdC": {
+          "type": "number",
+          "description": "Heat index threshold in Celsius for Extreme Caution / Warning level."
+        },
+        "dangerThresholdC": {
+          "type": "number",
+          "description": "Heat index threshold in Celsius for Danger level."
+        },
+        "notificationsEnabled": {
+          "type": "boolean",
+          "description": "Whether threshold exceedance alerts are enabled."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server last update timestamp."
+        }
+      },
+      "required": [
+        "ownerId",
+        "workerName",
+        "siteLocation",
+        "emergencyContactName",
+        "emergencyContactPhone",
+        "cautionThresholdC",
+        "warningThresholdC",
+        "dangerThresholdC",
+        "notificationsEnabled",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SensorReading": {
+      "title": "SensorReading",
+      "description": "Recorded environmental and MPU6050 motion reading from the ESP32 wearable or demonstration replay.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "temperature": {
+          "type": "number",
+          "description": "Ambient temperature in degrees Celsius."
+        },
+        "humidity": {
+          "type": "number",
+          "description": "Relative humidity percentage (0-100)."
+        },
+        "heatIndex": {
+          "type": "number",
+          "description": "Environmental heat index estimate in degrees Celsius."
+        },
+        "ax": {
+          "type": "number",
+          "description": "MPU6050 X-axis acceleration in g."
+        },
+        "ay": {
+          "type": "number",
+          "description": "MPU6050 Y-axis acceleration in g."
+        },
+        "az": {
+          "type": "number",
+          "description": "MPU6050 Z-axis acceleration in g."
+        },
+        "motionMagnitude": {
+          "type": "number",
+          "description": "Computed 3-axis vector magnitude in g."
+        },
+        "activityLabel": {
+          "type": "string",
+          "enum": ["Stationary", "Light Movement", "Active Labor", "Motion Spike (Review)"]
+        },
+        "anomalyFlagged": {
+          "type": "boolean",
+          "description": "True if an unusual motion spike was flagged for review."
+        },
+        "source": {
+          "type": "string",
+          "enum": ["live_ble", "live_serial", "demo", "manual_test"]
+        },
+        "recordedAtIso": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 40,
+          "description": "ISO 8601 device timestamp of the reading."
+        },
+        "latitude": {
+          "type": "number",
+          "description": "Optional live device GPS latitude in decimal degrees."
+        },
+        "longitude": {
+          "type": "number",
+          "description": "Optional live device GPS longitude in decimal degrees."
+        },
+        "gpsAccuracyM": {
+          "type": "number",
+          "description": "Optional GPS horizontal accuracy radius in meters."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server insertion timestamp."
+        }
+      },
+      "required": [
+        "ownerId",
+        "temperature",
+        "humidity",
+        "heatIndex",
+        "ax",
+        "ay",
+        "az",
+        "motionMagnitude",
+        "activityLabel",
+        "anomalyFlagged",
+        "source",
+        "recordedAtIso",
+        "createdAt"
+      ]
+    },
+    "SafetyAlert": {
+      "title": "SafetyAlert",
+      "description": "Threshold exceedance or motion review notification event.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "level": {
+          "type": "string",
+          "enum": ["caution", "warning", "danger", "motion_review"]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "heatIndexC": {
+          "type": "number"
+        },
+        "acknowledged": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "level",
+        "title",
+        "message",
+        "heatIndexC",
+        "acknowledged",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/private/settings": {
+      "schema": { "$ref": "#/entities/WorkerSettings" },
+      "description": "Private worker profile, emergency contact PII, and heat-exposure alert thresholds."
+    },
+    "/users/{userId}/readings/{readingId}": {
+      "schema": { "$ref": "#/entities/SensorReading" },
+      "description": "Time-stamped environmental and MPU6050 sensor readings belonging to the worker."
+    },
+    "/users/{userId}/alerts/{alertId}": {
+      "schema": { "$ref": "#/entities/SafetyAlert" },
+      "description": "Safety threshold and motion review notifications belonging to the worker."
+    }
+  }
+}

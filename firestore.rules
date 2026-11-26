@@ -1,0 +1,215 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedOwner(userId) {
+      return isSignedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.uid == userId;
+    }
+
+    function isValidSettings(data) {
+      return data.keys().hasAll([
+          'ownerId',
+          'workerName',
+          'siteLocation',
+          'emergencyContactName',
+          'emergencyContactPhone',
+          'cautionThresholdC',
+          'warningThresholdC',
+          'dangerThresholdC',
+          'notificationsEnabled',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId',
+          'workerName',
+          'siteLocation',
+          'emergencyContactName',
+          'emergencyContactPhone',
+          'cautionThresholdC',
+          'warningThresholdC',
+          'dangerThresholdC',
+          'notificationsEnabled',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.ownerId is string && isValidId(data.ownerId) && data.ownerId == request.auth.uid
+        && data.workerName is string && data.workerName.size() >= 1 && data.workerName.size() <= 80
+        && data.siteLocation is string && data.siteLocation.size() <= 120
+        && data.emergencyContactName is string && data.emergencyContactName.size() <= 80
+        && data.emergencyContactPhone is string && data.emergencyContactPhone.size() <= 24 && data.emergencyContactPhone.matches('^[0-9+\\-()\\s]*$')
+        && data.cautionThresholdC is number && data.cautionThresholdC >= 20 && data.cautionThresholdC <= 55
+        && data.warningThresholdC is number && data.warningThresholdC >= data.cautionThresholdC && data.warningThresholdC <= 60
+        && data.dangerThresholdC is number && data.dangerThresholdC >= data.warningThresholdC && data.dangerThresholdC <= 70
+        && data.notificationsEnabled is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidReading(data) {
+      return data.keys().hasAll([
+          'ownerId',
+          'temperature',
+          'humidity',
+          'heatIndex',
+          'ax',
+          'ay',
+          'az',
+          'motionMagnitude',
+          'activityLabel',
+          'anomalyFlagged',
+          'source',
+          'recordedAtIso',
+          'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId',
+          'temperature',
+          'humidity',
+          'heatIndex',
+          'ax',
+          'ay',
+          'az',
+          'motionMagnitude',
+          'activityLabel',
+          'anomalyFlagged',
+          'source',
+          'recordedAtIso',
+          'latitude',
+          'longitude',
+          'gpsAccuracyM',
+          'createdAt'
+        ])
+        && data.ownerId is string && isValidId(data.ownerId) && data.ownerId == request.auth.uid
+        && data.temperature is number && data.temperature >= -40 && data.temperature <= 85
+        && data.humidity is number && data.humidity >= 0 && data.humidity <= 100
+        && data.heatIndex is number && data.heatIndex >= -40 && data.heatIndex <= 100
+        && data.ax is number && data.ax >= -20 && data.ax <= 20
+        && data.ay is number && data.ay >= -20 && data.ay <= 20
+        && data.az is number && data.az >= -20 && data.az <= 20
+        && data.motionMagnitude is number && data.motionMagnitude >= 0 && data.motionMagnitude <= 35
+        && data.activityLabel is string && data.activityLabel in ['Stationary', 'Light Movement', 'Active Labor', 'Motion Spike (Review)']
+        && data.anomalyFlagged is bool
+        && data.source is string && data.source in ['live_ble', 'live_serial', 'demo', 'manual_test']
+        && data.recordedAtIso is string && data.recordedAtIso.size() >= 10 && data.recordedAtIso.size() <= 40
+        && (!('latitude' in data) || (data.latitude is number && data.latitude >= -90 && data.latitude <= 90))
+        && (!('longitude' in data) || (data.longitude is number && data.longitude >= -180 && data.longitude <= 180))
+        && (!('gpsAccuracyM' in data) || (data.gpsAccuracyM is number && data.gpsAccuracyM >= 0 && data.gpsAccuracyM <= 50000))
+        && data.createdAt is timestamp;
+    }
+
+    function isValidAlert(data) {
+      return data.keys().hasAll([
+          'ownerId',
+          'level',
+          'title',
+          'message',
+          'heatIndexC',
+          'acknowledged',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId',
+          'level',
+          'title',
+          'message',
+          'heatIndexC',
+          'acknowledged',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.ownerId is string && isValidId(data.ownerId) && data.ownerId == request.auth.uid
+        && data.level is string && data.level in ['caution', 'warning', 'danger', 'motion_review']
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 120
+        && data.message is string && data.message.size() >= 1 && data.message.size() <= 400
+        && data.heatIndexC is number && data.heatIndexC >= -40 && data.heatIndexC <= 100
+        && data.acknowledged is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    match /users/{userId}/private/settings {
+      allow get: if isValidId(userId) && isVerifiedOwner(userId);
+      allow create: if isValidId(userId)
+        && isVerifiedOwner(userId)
+        && isValidSettings(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isVerifiedOwner(userId)
+        && isValidSettings(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'workerName',
+          'siteLocation',
+          'emergencyContactName',
+          'emergencyContactPhone',
+          'cautionThresholdC',
+          'warningThresholdC',
+          'dangerThresholdC',
+          'notificationsEnabled',
+          'updatedAt'
+        ]);
+      allow delete: if isValidId(userId) && isVerifiedOwner(userId);
+    }
+
+    match /users/{userId}/readings/{readingId} {
+      allow get: if isValidId(userId) && isValidId(readingId) && isVerifiedOwner(userId);
+      allow list: if isValidId(userId) && isVerifiedOwner(userId) && resource.data.ownerId == request.auth.uid;
+      allow create: if isValidId(userId)
+        && isValidId(readingId)
+        && isVerifiedOwner(userId)
+        && isValidReading(incoming())
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isValidId(userId) && isValidId(readingId) && isVerifiedOwner(userId);
+    }
+
+    match /users/{userId}/alerts/{alertId} {
+      allow get: if isValidId(userId) && isValidId(alertId) && isVerifiedOwner(userId);
+      allow list: if isValidId(userId) && isVerifiedOwner(userId) && resource.data.ownerId == request.auth.uid;
+      allow create: if isValidId(userId)
+        && isValidId(alertId)
+        && isVerifiedOwner(userId)
+        && isValidAlert(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isValidId(alertId)
+        && isVerifiedOwner(userId)
+        && isValidAlert(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['acknowledged', 'updatedAt']);
+      allow delete: if isValidId(userId) && isValidId(alertId) && isVerifiedOwner(userId);
+    }
+  }
+}

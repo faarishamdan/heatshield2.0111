@@ -1,0 +1,6 @@
+{
+  "name": "HEATSHIELD AI",
+  "description": "AI-powered wearable heat-exposure and motion monitoring system for outdoor and construction workers using ESP32-WROOM-DA BLE telemetry, Firebase sync, and Gemini safety analysis.",
+  "requestFramePermissions": ["bluetooth", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
